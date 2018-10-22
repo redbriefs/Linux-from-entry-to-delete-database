@@ -1,0 +1,306 @@
+用户组和权限管理
+
+安全3A
+Authentication 认证
+Authorization  授权
+Accouting|Audition  审计
+Linux 登录认证通过 获得token(令牌)，Linux用户/组 主要是看ID号来识别使用
+系统用户中许多不需要登录（守护进程），普通用户 交互式登录
+Linux 创建用户默认 用户名和组名（主组）相同（UID和GID可能也相同）
+Linux 安全context 上下文  以进程发起者的身份运行，进程所能够访问的资源权限取决于发起者
+Linux 组分为主组和附加组，每个用户必须有且一个主组，可以属于多个附加组
+id user 查看用户UID GID等信息
+
+
+Linux用户和组的主要配置文件： 
+/etc/passwd：用户及其属性信息(名称、UID、主组ID等） pwunconv把口令放回此文件 
+/etc/group：组及其属性信息 
+/etc/shadow：用户密码及其相关属性                pwconv把口令放在这（默认）
+/etc/gshadow：组密码及其相关属性
+
+boot ->e ->  找到linux16 后面添加init=/bin/bash  CTRL+x保存
+mount -o rw,remount /
+cat /etc/passwd 
+
+chfn user  修改用户描述信息
+finger     可以查看用户描述信息（需安装）
+chsh  -s  user  /sbin/nologin  更改用户SH类型
+getent passwd = cat /etc/passwd
+getent passwd user  只看user的信息
+getent group = cat /etc/group
+getent group user  只看user的信息
+grub-md5-crypt 输入明文进行MD5加密
+更改用户密码加密算法： authconfig --passalgo=sha256 --update    默认定义在/etc/login.defs
+openssl rand -base64 12  生成12位随机字符 
+gpasswd GROUP  给指定组加口令
+gpasswd -r GROUP 删除GROUP口令
+gpasswd -a USER GROUP   将USER加入GROUP
+gpasswd -d USER GROUP   将GROUP中USER删除
+groupmems -a USER -g GROUP  将USER加入GROUP
+groupmems -d USER -g GROUP  将GROUP中USER删除
+vipw = vi /etc/passwd vipw具有语法检测
+vigr = vi /etc/group  vigr具有语法检测
+pwck和grpck 检测/etc/passwd和group 有无问题
+
+cp -r /etc/skel/. /home/test  复制skel目录所有文件   . 代表当前目录 
+
+groups USER 查看USER的用户组
+
+useradd USER 默认配置建立用户 默认配置文件 /etc/login.defs
+useradd -u NUM USER      指定USER uid = NUM
+useradd -u NUM -o USER   -o 忽略uid唯一检测
+useradd -d /PATH/DIR USER  指定USER家目录
+useradd -r USER -s /sbin/nologin     创建USER用户为系统用户，系统用户默认不生成家目录(可使用-m 强制创建),指定SHELL
+useradd -c “test” USER       创建USER并添加描述
+useradd -g GROUP USER   创建USER并指定主组
+useradd -G GROUP,GROUP2... USER   创建USER并添加辅助组 
+useradd -N USER    创建USER主组为user组  配置文件在 /etc/default/useradd
+        -m         强制创建家目录(系统用户默认不创建家目录，可使用此选项创建))
+        -M         不创建家目录
+useradd -D     显示默认配置参数
+useradd –D -s SHELL         默认SHELL
+useradd –D –b BASE_DIR      默认家目录
+useradd –D –g GROUP         默认主组
+
+newusers FILE  (FILE格式为/etc/passwd格式)
+chpasswd  USER:PASSWORD  改USER密码为PASSWORD
+
+usermod [OPTION] login 
+-u UID: 新UID 
+-g GID: 新主组 
+-G GROUP1[,GROUP2,...[,GROUPN]]]：新附加组，原来的附加组将会被 覆盖；若保留原有，则要同时使用-a选项 
+-s SHELL：新的默认SHELL 
+-c 'COMMENT'：新的注释信息 
+-d HOME: 新家目录不会自动创建；若要创建新家目录并移动原家数据， 同时使用-m选项 
+-l login_name: 新的名字； 
+-L: lock指定用户,在/etc/shadow 密码栏的增加 ! 
+-U: unlock指定用户,将 /etc/shadow 密码栏的 ! 拿掉 
+-e YYYY-MM-DD: 指明用户账号过期日期 
+-f INACTIVE: 设定非活动期限
+usermod -G "" USER 清空USER附加组
+
+userdel USER 删除USER 默认不删除家目录、邮件等 -r选项一起删除
+        -r   删除家目录、邮箱目录
+
+id [OPTION]... [USER]                    
+-u: 显示UID -g: 显示GID 
+-G: 显示用户所属的组的ID 
+-n: 显示名称，需配合ugG使用
+id -Gn USER = groups USER 
+
+su USER 切换USER用户，默认变量、目录没切换       exit/logout退出切换，不要一直切    
+su - USER 完全切换USER用户
+su -USER -CMD  切换用户USER执行CMD，并退回原用户 
+
+passwd [OPTIONS] UserName: 修改指定用户的密码 
+常用选项： 
+-d：删除指定用户密码 
+-l：锁定指定用户 -u：解锁指定用户 
+-e：强制用户下次登录修改密码 
+-f：强制操作 
+-n mindays：指定最短使用期限 
+-x maxdays：最大使用期限 
+-w warndays：提前多少天开始警告 
+-i inactivedays：非活动期限 
+--stdin：从标准输入接收用户密码 
+echo "PASSWORD" | passwd --stdin USERNAM
+
+chage [OPTION]... LOGIN 
+-d LAST_DAY 
+-E --expiredate EXPIRE_DATE 
+-I --inactive INACTIVE 
+-m --mindays MIN_DAYS 
+-M --maxdays MAX_DAYS 
+-W --warndays WARN_DAYS 
+–l  显示密码策略 
+chage user  修改用户账户、口令有效期等时间  -l user 可以查看
+chage -d0 user  user口令立即过期，下次登录必须修改
+
+groupadd [OPTION]... group_name 
+-g GID: 指明GID号；[GID_MIN, GID_MAX] 
+-r: 创建系统组 
+CentOS 6: ID<500 CentOS 7: ID<1000
+
+groupmod [OPTION]... group 
+-n group_name: 新名字 
+-g GID: 新的GID
+
+groupdel GROUP   删除GROUP组，不能删除主组
+
+gpasswd [OPTION] GROUP 
+-a user  将user添加至指定组中 
+-d user  从指定组中移除用户user 
+-A user1,user2,...  设置有管理权限的用户列表 
+
+groupmems [options] [action] options： 
+-g, --group groupname 更改为指定组 (只有root) Actions: 
+-a, --add username     指定用户加入组 
+-d, --delete username  从组中删除用户 
+-p, --purge            从组中清除所有成员 
+-l,  --list            显示组成员列表
+
+newgrp命令：临时切换主组 如果用户本不属于此组，则需要组密码
+
+
+chown [OPTION]... [OWNER][:[GROUP]] FILE... 
+用法： 
+OWNER 
+OWNER:GROUP    修改所有者为OWNER   所属组为GROUP
+OWNER.         修改所有者为OWNER   所属组为OWNER
+.GROUP         只修改所有组为GROUP
+:GROUP 
+命令中的冒号可用.替换 
+-R: 递归 
+chown [OPTION]... --reference=RFILE FILE... 
+
+修改文件的属组：chgrp 
+chgrp [OPTION]... GROUP FILE... 
+chgrp [OPTION]... --reference=RFILE FILE... 
+-R 递归
+
+chmod [OPTION]... OCTAL-MODE FILE... 
+-R: 递归修改权限 
+chmod [OPTION]... MODE[,MODE]... FILE... 
+MODE： 
+修改一类用户的所有权限： 
+u=  g= o= ug=  a= u=,g=        u=所有者    g=所属组    o=其他    a=全部
+修改一类用户某位或某些位权限 
+u+  u- g+ g- o+ o- a+ a- + 
+chmod [OPTION]... --reference=RFILE FILE... 
+参考RFILE文件的权限，将FILE的修改为同RFILE
+-R 递归改权限时   X（大写） 只对目录加执行权限，如果目录内文件有x权限，则该文件也加
+能不能删除文件由目录权限决定
+对于目录只有执行权限，能进入目录，不能浏览文件列表，能访问目录里的文件（知道名字）。
+对于目录只有读权限，只能浏览文件列表。
+
+
+umask +default=666(file)/777(dir)
+
+file  666-default=umask  
+
+dir  777-default=umask
+
+
+
+umask 取消对应的权限
+
+666    110110110
+
+125    001010101
+
+642    110100010
+
+
+
+FILE   666-125=541（奇数+1）=642
+
+DIR    777-125=652
+
+可以放在 ~/.bashrc 文件保存
+
+默认设置在  /etc/bashrc
+
+-p        显示里加umask
+
+umask -p >> .bashrc
+
+-S        u=   g=  o=  模式显示
+
+umask u=,g=,o=      直接设置默认权限，不用转换
+
+
+
+
+
+三种特殊权限 
+
+SUID  wrs  运行程序时以文件所有者权限
+
+chmod u+s/-s
+
+chmod 4xxx 
+
+只适合二进制可执行的程序上
+
+
+
+
+
+SGID wrs运行程序时以用户组权限
+
+chmod g+s/-s
+
+chmod 2xxx
+
+作用在目录上，目录里所有新建文件所属组为目录的用户组
+
+
+
+
+sticky wrt粘滞位 作用在文件夹
+
+不能在目录(w权限)随意删除文件
+
+chmod o+t/-t 
+
+chmod 1xxx
+
+可以修改，覆盖
+
+
+
+chattr +i FILE  不能删除、改名、修改 （-i 解锁）    
+
+chattr +a FILE 不能改名、删除，内容可以追加不能修改（-a 解锁）
+
++A 锁定读时间
+
+扩展的元数据属性，默认不显示，用 lsattr可以查看是否chattr锁定
+
+
+
+ACL：Access Control List，访问控制列表，实现灵活的权限管理 Centos6 装完系统后自己挂载的分区要使用ACL需要手动添加，7不需要
+
+setfacl -m u:wang:0 FILE  wang用户禁止访问FILE 
+
+setfacl -m u:mage:rw FILE   mage用户能读能写FILE
+
+setfacl -m g:g1:rw FILE  添加g1组读写权限
+
+setfacl -x g:g2 FILE 删除g2组权限
+
+-R 递归
+
+-M setfacl -M  file.acl file|directory   文件读取设置的ACL权限并设置
+
+-X 删除同M
+
+setfacl -m  d:u:wang:rx  directory    在目录新建的文件，默认就添加ACL权限
+setfacl -k  dir 删除默认ACL权限
+通过ACL赋予目录默认x权限，目录内文件也不会继承x权限
+
+setfacl -b FILE 清空所有ACL权限
+
+getfacl file1 | setfacl --set-file=- file2  复制file1的acl权限给file2   - 代表前面命令标准输出
+
+用户属于多个组能累加权限。
+
+启用ACL后，传统权限显示的组权限显示的是mask权限
+
+mask定义除了所有者和other的最高权限，mask=r  所有设置权限最高只有读权限
+
+setfacl -m mask::r FILE  设置mask权限只有读
+
+--set选项会把原有的ACL项都删除，用新的替代，需要注意的是一定要包含 UGO的设置，不能象-m一样只是添加ACL就可以 
+示例： setfacl --set u::rw,u:wang:rw,g::r,o::- file1
+
+getfacl FILE/DIR 查看设置的ACL权限
+
+备份和恢复ACL 
+
+主要的文件操作命令cp和mv都支持ACL，只是cp命令需要加上-p 参数。但是 tar等常见的备份工具是不会保留目录和文件的ACL信息 
+getfacl -R /tmp/dir1 > acl.txt 
+setfacl -R -b /tmp/dir1 
+setfacl -R  --set-file=acl.txt /tmp/dir1 
+setfacl --restore acl.txt 
+getfacl -R /tmp/dir1
